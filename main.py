@@ -6,7 +6,7 @@ import math
 
 print(os.path.abspath(os.getcwd()))
 path = os.path.abspath(os.getcwd())
-pygame.init()
+
 MAXX = 4000
 MAXY = 4000
 X= 800
@@ -35,10 +35,17 @@ f = {
 screen = pygame.display.set_mode((X,Y))
 pygame.display.set_caption('Game')
 wall = pygame.image.load('./wallpaper.png')
+menu = pygame.image.load('./menu.png')
 player = pygame.image.load('./ball.png')
 player = pygame.transform.scale(player,(player_width,player_height))
 tile = pygame.image.load('./tile.png')
 tile = pygame.transform.scale(tile,(tile_size,tile_size))
+star = pygame.image.load('./star.png')
+star = pygame.transform.scale(star,(tile_size,tile_size))
+gold = pygame.image.load('./gold.png')
+gold = pygame.transform.scale(gold,(tile_size,tile_size))
+hp = pygame.image.load('./hp.png')
+hp = pygame.transform.scale(hp,(tile_size,tile_size))
 
 
 bullet = pygame.image.load('./bullet.png')
@@ -56,6 +63,9 @@ pygame.Surface.set_colorkey(bullet,[255,255,255])
 pygame.Surface.set_colorkey(player,[255,255,255])
 pygame.Surface.set_colorkey(ak47,[255,255,255])
 pygame.Surface.set_colorkey(grenade,[255,255,255])
+pygame.Surface.set_colorkey(star,[255,255,255])
+pygame.Surface.set_colorkey(gold,[255,255,255])
+pygame.Surface.set_colorkey(hp,[255,255,255])
 def rot_center(image, angle):
     """rotate an image while keeping its center and size"""
     orig_rect = image.get_rect()
@@ -236,15 +246,28 @@ class Item:
     self.x = x
     self.y = y
   def draw(self, cam):
+    if (self.state==False): return
     dx = self.x - cam.x
     dy = self.y - cam.y
     if dx < -50 or dy < -50: return False
     if dx > 850 or dy > 650: return False
     if self.name == "star":
-      screen.blit(tile, (dx-tile_size/2,dy-tile_size/2))
+      screen.blit(star, (dx-tile_size/2,dy-tile_size/2))
+    elif self.name == "gold":
+      screen.blit(gold, (dx-tile_size/2,dy-tile_size/2))
     else:
-      
-  
+      screen.blit(hp, (dx-tile_size/2,dy-tile_size/2))
+  def checkCollide(self,o):
+    dx = abs(self.x - o.x)
+    dy = abs(self.y - o.y)
+    if dx < tile_size/2 and dy < tile_size/2:
+      self.state=False
+      if self.name=="star": o.dmg=o.dmg+50
+      elif self.name=="gold": o.gold= o.gold+1
+      else: o.hitpoint=o.hitpoint+50
+
+    
+
 
 class Character:
   def __init__(self, x, y, t, w,hitpoint = 100) -> None:
@@ -266,6 +289,9 @@ class Character:
     self.ammo = [0,0,0]
     self.loadedAmmo = [0,0,0]
     self.grenade = False
+    self.gold=0
+    self.dmg=50
+    
 
   def attack(self,o):
     if self.type == "player": return
@@ -374,7 +400,6 @@ class Character:
         self.vD = dir
         self.hitpoint = self.hitpoint - 30
         
-
   def shoot(self,pos, b):
     if not self.shooting: return
     # grenade
@@ -391,11 +416,10 @@ class Character:
         self.lastshot = time.time()
         p = self.getDirectionMouse(pos) + random.randint(-self.recoil,self.recoil)
 
-        temp = Ballistic(self.x,self.y,2000, p, "player",bullet )
+        temp = Ballistic(self.x,self.y,2000, p, "player",bullet,False, self.dmg )
         b.append(temp)
 
-        if self.recoil < 8: self.recoil = self.recoil + 3
-    
+        if self.recoil < 8: self.recoil = self.recoil + 3  
 
   def keyDown(self, key):
     if key[pygame.K_2] :
@@ -455,78 +479,6 @@ class Character:
     self.vD = self.angle
     self.v = player_vmax
 p = Character(733,833, "player","ak47")
-e =[]
-for i in range(2):
-  temp = Character(800+i*100, 1000,"enemy1",None)
-  temp2 = Character(1100+i*100, 1300,"enemy2",None)
-  e.append(temp2)
-  e.append(temp)
-camera = Camera(0,0)
-t = []
-b = []
-for i in range(80):
-  
-  # for j in range(80):
-  #   if (i<=6): top = Tile(j*tile_size,i*tile_size)
-  #   t.append(top)
-  #   if (i>=74): bottom = Tile(j*tile_size,i*tile_size)
-  #   if (i>=74): t.append(bottom)
-  #   if (i<=8): left = Tile(i*tile_size,j*tile_size)
-  #   t.append(left)
-  #   if (i>=72): right = Tile(i*tile_size,j*tile_size)
-  #   if (i>=72): t.append(right)
-    
-  if (i!=15 and i!=16 and i!=25 and i!=24 and i!=35 and i!=36 and i!=46 and i!=47 and i!=57 and i!=58):
-    wall_ver1 = Tile( (i+1)*tile_size, 300)
-    wall_ver2 = Tile( (i+1)*tile_size, 1000)
-    wall_ver3 = Tile( (i+1)*tile_size, 2000)
-    wall_ver4 = Tile( (i+1)*tile_size, 2800)
-    wall_ver5 = Tile( (i+1)*tile_size, 3700)
-    t.append(wall_ver1)
-    t.append(wall_ver2)
-    t.append(wall_ver3)
-    t.append(wall_ver4)
-    t.append(wall_ver5)
-  
-  if (i!=15 and i!=16 and i!=23 and i!=24 and i!=35 and i!=36 and i!=46 and i!=47 and i!=57 and i!=58):
-    wall_hor1 = Tile(400,  (i+1)*tile_size)
-    wall_hor2 = Tile(1200,  (i+1)*tile_size)
-    wall_hor3 = Tile(2000,  (i+1)*tile_size)
-    wall_hor4 = Tile(2800,  (i+1)*tile_size)
-    wall_hor5 = Tile(3600,  (i+1)*tile_size)
-    t.append(wall_hor1)
-    t.append(wall_hor2)
-    t.append(wall_hor3)
-    t.append(wall_hor4)
-    t.append(wall_hor5)
-    
-    
-  # room 1:
-  if (i>=10 and i<=12):
-    wall1= Tile(750,i*tile_size)
-    t.append(wall1)
-    wall1= Tile(850,i*tile_size)
-    t.append(wall1)
-  
-wall1= Tile(800,500)
-t.append(wall1)
-wall1= Tile(800,600)
-t.append(wall1)
-box1=Tile(800,550,'crate')
-t.append(box1)
-wall1= Tile(750,800)
-t.append(box1)
-wall1= Tile(750,850)
-t.append(box1)
-wall1= Tile(750,900)
-t.append(box1)
-  
-    
-temp1 = Tile(1000, 1000,'crate')
-t.append(temp1)
-
-
-
 
 def cameraMove():
   nx = p.x - 400
@@ -535,79 +487,168 @@ def cameraMove():
   if ny < 0: ny = 0
   camera.x = nx
   camera.y = ny
+camera = Camera(0,0)
 
-clock = pygame.time.Clock()
-  
-running = True
-cameraMove()
+e =[]
+t = []
+b = []
+item =[]
+def initGame(e,t,b,item):
+  for i in range(2):
+    temp = Character(800+i*100, 1000,"enemy1",None)
+    temp2 = Character(1100+i*100, 1300,"enemy2",None)
+    e.append(temp2)
+    e.append(temp)
 
 
-
-
-while(running):
-  clock.tick(60)
-  if p.hitpoint <= 0: break
-  pos = pygame.mouse.get_pos()
-  # check tile
-  for i in t:
-    i.playerCollide(p,player_height)
-    for j in e:
-      i.playerCollide(j,player_height)
-  p.playerCollide(e)
-  p.update()
-  p.shoot(pos,b)
-  for i in e:
-    if i.hitpoint <=0:
-      e.remove(i)
-      del i
-      continue
-    i.attack(p)
-    i.update()
-  # check bullet
-  for i in b:
-    timex = time.time()
-    i.checkHit(t,timex)
-    i.checkHit(p,timex)
-    i.checkHit(e,timex)
-    i.move()
+  for i in range(80):
     
       
+    if (i!=15 and i!=16 and i!=25 and i!=24 and i!=35 and i!=36 and i!=46 and i!=47 and i!=57 and i!=58):
+      wall_ver1 = Tile( (i+1)*tile_size, 300)
+      wall_ver2 = Tile( (i+1)*tile_size, 1000)
+      wall_ver3 = Tile( (i+1)*tile_size, 2000)
+      wall_ver4 = Tile( (i+1)*tile_size, 2800)
+      wall_ver5 = Tile( (i+1)*tile_size, 3700)
+      t.append(wall_ver1)
+      t.append(wall_ver2)
+      t.append(wall_ver3)
+      t.append(wall_ver4)
+      t.append(wall_ver5)
+    
+    if (i!=15 and i!=16 and i!=23 and i!=24 and i!=35 and i!=36 and i!=46 and i!=47 and i!=57 and i!=58):
+      wall_hor1 = Tile(400,  (i+1)*tile_size)
+      wall_hor2 = Tile(1200,  (i+1)*tile_size)
+      wall_hor3 = Tile(2000,  (i+1)*tile_size)
+      wall_hor4 = Tile(2800,  (i+1)*tile_size)
+      wall_hor5 = Tile(3600,  (i+1)*tile_size)
+      t.append(wall_hor1)
+      t.append(wall_hor2)
+      t.append(wall_hor3)
+      t.append(wall_hor4)
+      t.append(wall_hor5)
+      
+      
+    # room 1:
+    if (i>=10 and i<=12):
+      wall1= Tile(750,i*tile_size)
+      t.append(wall1)
+      wall1= Tile(850,i*tile_size)
+      t.append(wall1)
+    
+  wall1= Tile(800,500)
+  t.append(wall1)
+  wall1= Tile(800,600)
+  t.append(wall1)
+  box1=Tile(800,550,'crate')
+  t.append(box1)
+  wall1= Tile(750,800)
+  t.append(box1)
+  wall1= Tile(750,850)
+  t.append(box1)
+  wall1= Tile(750,900)
+  t.append(box1)
+    
+      
+  temp1 = Tile(1000, 1000,'crate')
+  t.append(temp1)
 
-  cameraMove()
+  item =[]
+  temp= Item(900,900,"hp",True)
+  temp1= Item(950,900,"star",True)
+  temp2= Item(900,950,"gold",True)
+  item.append(temp)
+  item.append(temp1)
+  item.append(temp2)
   
-  screen.blit(wall,(0,0),(camera.x,camera.y,800,600))
-  for i in e:
-    i.draw(camera)
-  p.draw(pos)
-  # draw tile/bullet
-  for i in t:
-    if i.hidden:
-      t.remove(i)
-      del i
-      continue
-    i.draw(camera)
+def resetGame(e,t,b,item):
+  e = []
+  t = []
+  b = []
+  item = []
+initGame(e,t,b,item)
 
-  for i in b:
-    i.draw(camera)
-
-    if i.vD == 999: 
-      b.remove(i)
-      del i
-  # renderitem
-
-  pygame.display.flip()
+def Run():
+  clock = pygame.time.Clock()
+  running = True
   
-  for i in pygame.event.get():
-    if i.type == pygame.MOUSEBUTTONDOWN:
-      p.shooting = True
-    if i.type == pygame.MOUSEBUTTONUP:
-      p.shooting = False
-    key = pygame.key.get_pressed()
-    p.keyDown(key)
+  pygame.init()
+  while(running):
+    clock.tick(60)
+    pygame.display.flip() 
+    if (False):
+      screen.blit(menu,(0,0),(camera.x,camera.y,800,600))
+      timeEnd=time.time()
+      if (timeEnd-time.time()>4): running=False
+    else:
+      # clock.tick(60)
+      if p.hitpoint <= 0: break
+      pos = pygame.mouse.get_pos()
+      # check tile
+      for i in t:
+        i.playerCollide(p,player_height)
+        for j in e:
+          i.playerCollide(j,player_height)
+      p.playerCollide(e)
+      p.update()
+      p.shoot(pos,b)
+      for i in e:
+        if i.hitpoint <=0:
+          e.remove(i)
+          del i
+          continue
+        i.attack(p)
+        i.update()
+      # check bullet
+      for i in b:
+        timex = time.time()
+        i.checkHit(t,timex)
+        i.checkHit(p,timex)
+        i.checkHit(e,timex)
+        i.move()
+        
+      cameraMove()
+      
+      screen.blit(wall,(0,0),(camera.x,camera.y,800,600))
+      for i in e:
+        i.draw(camera)
+      p.draw(pos)
+      # draw tile/bullet
+      for i in t:
+        if i.hidden:
+          t.remove(i)
+          del i
+          continue
+        i.draw(camera)
 
-    if i.type == pygame.KEYUP:
-      p.keyUp(i.key)
-    if i.type == pygame.QUIT:
-      running = False
+      for i in item:
+        i.checkCollide(p)
+        if i.state==False: del i
+        else: 
+          i.draw(camera)
+      for i in b:
+        i.draw(camera)
+
+        if i.vD == 999: 
+          b.remove(i)
+          del i
+      # renderitem
+
+      # pygame.display.flip()
+      
+      for i in pygame.event.get():
+        if i.type == pygame.MOUSEBUTTONDOWN:
+          p.shooting = True
+        if i.type == pygame.MOUSEBUTTONUP:
+          p.shooting = False
+        key = pygame.key.get_pressed()
+        p.keyDown(key)
+
+        if i.type == pygame.KEYUP:
+          p.keyUp(i.key)
+        if i.type == pygame.QUIT:
+          running = False
+     
+  pygame.quit()
   
-pygame.quit()
+Run()
