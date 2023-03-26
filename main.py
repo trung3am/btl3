@@ -39,6 +39,8 @@ player = pygame.image.load('./ball.png')
 player = pygame.transform.scale(player,(player_width,player_height))
 tile = pygame.image.load('./tile.png')
 tile = pygame.transform.scale(tile,(tile_size,tile_size))
+
+
 bullet = pygame.image.load('./bullet.png')
 bullet = pygame.transform.scale(bullet,bullet_size["pistol"])
 crate = pygame.image.load('./crate.png')
@@ -73,6 +75,7 @@ class Camera:
     if dx < 0 or dy < 0: return False
     if dx > 1000 or dy > 800: return False
     return True
+
 
 class Tile:
   def __init__(self, x, y, type ="tile") -> None:
@@ -113,10 +116,12 @@ class Tile:
       screen.blit(tile, (dx-tile_size/2,dy-tile_size/2))
     else:
       screen.blit(crate, (dx-tile_size/2,dy-tile_size/2))
+      
+
   
 
 class Ballistic:
-  def __init__(self,x , y, v, vD, o,bullet, grenade = False) -> None:
+  def __init__(self,x , y, v, vD, o,bullet, grenade = False, dmg = 30) -> None:
     self.x = x
     self.y = y
     self.v = v
@@ -128,6 +133,7 @@ class Ballistic:
     self.hidden = False
     self.exploded = False
     self.explosionChecked = False
+    self.dmg = dmg
   def bounce(self,o):
     pass
 
@@ -163,11 +169,12 @@ class Ballistic:
       if type(o) == Tile and o.type == "crate":
         o.hitpoint = o.hitpoint - 1
         if o.hitpoint < 0: o.hidden = True
-      if type(o) == Character: o.hitpoint = o.hitpoint - 30
+      if type(o) == Character: o.hitpoint = o.hitpoint - self.dmg
       return True
     return False
 
   def checkExplode(self, o,t):
+    
     if t - self.timer < 3: return
     if type(o) != Character and type(o) != Tile: return
     self.explosionChecked = True
@@ -177,7 +184,8 @@ class Ballistic:
 
     if d <  100 :
       if type(o) == Character: o.hitpoint = o.hitpoint - 30
-      if type(0) == Tile and o.type == 'crate': o.hitpoint = -1
+      if type(o) == Tile and o.type == 'crate':
+        o.hidden = True
     if d <  70 :
       if type(o) == Character: o.hitpoint = o.hitpoint - 40
 
@@ -216,7 +224,7 @@ class Ballistic:
     if dx < -50 or dy < -50: return False
     if dx > 850 or dy > 650: return False
     screen.blit(self.img, (dx,dy))
-    if time.time() - self.timer > 3:
+    if time.time() - self.timer > 3 and self.grenade:
       pygame.draw.circle(screen,[255,255,255],(dx,dy),100)
       if time.time() - self.timer > 3.2:
         self.hidden = True
@@ -227,10 +235,19 @@ class Item:
     self.state = state
     self.x = x
     self.y = y
+  def draw(self, cam):
+    dx = self.x - cam.x
+    dy = self.y - cam.y
+    if dx < -50 or dy < -50: return False
+    if dx > 850 or dy > 650: return False
+    if self.name == "star":
+      screen.blit(tile, (dx-tile_size/2,dy-tile_size/2))
+    else:
+      
   
 
 class Character:
-  def __init__(self, x, y, t, w) -> None:
+  def __init__(self, x, y, t, w,hitpoint = 100) -> None:
     self.x = x
     self.y = y
     self.m = False
@@ -241,7 +258,7 @@ class Character:
     self.v = 100
     self.weapon = w
     self.face = 0
-    self.hitpoint = 100
+    self.hitpoint = hitpoint
     self.type = t
     self.shooting = False
     self.lastshot = 0
@@ -252,13 +269,26 @@ class Character:
 
   def attack(self,o):
     if self.type == "player": return
-    dx = self.x - o.x
-    dy = self.y - o.y
-    if math.sqrt(dx*dx + dy*dy) < 250:
-      self.vD = self.getDirection((o.x,o.y))
-    else:
-      self.vD = 999
+    if self.type == "enemy1":
+      dx = self.x - o.x
+      dy = self.y - o.y
+      if math.sqrt(dx*dx + dy*dy) < 250:
+        self.vD = self.getDirection((o.x,o.y))
+      else:
+        self.vD = 999
+    if self.type == "enemy2":
+      dx = self.x - o.x
+      dy = self.y - o.y
 
+      if math.sqrt(dx*dx + dy*dy) < 350 and  time.time() - self.lastshot > 2:
+        self.lastshot =  time.time()
+        p = self.getDirection((o.x,o.y))
+        temp = Ballistic(self.x,self.y,500, p+1, "enemy2",bullet, False, 15 )
+        temp1 = Ballistic(self.x,self.y,500, p-1, "enemy2",bullet, False,15 )
+        b.append(temp)
+        b.append(temp1)
+      else:
+        self.vD = 999
   def update(self):
     if not self.shooting and self.recoil != 0 and time.time() - self.lastshot > 1:
       self.recoil = 0
@@ -326,7 +356,7 @@ class Character:
         self.drawGun(pos, grenade)
       else:
         self.drawGun(pos, ak47)
-    if self.type == "enemy":
+    else:
       self.drawEnemy(pos)
     
   def drawEnemy(self, cam):
@@ -370,10 +400,10 @@ class Character:
   def keyDown(self, key):
     if key[pygame.K_2] :
       self.grenade = True
-      self.lastshot = 2
+      # self.lastshot = 2
     if key[pygame.K_1] :
       self.grenade = False
-      self.lastshot = 2
+      # self.lastshot = 2
       print(self.grenade)
     if key[pygame.K_a] :
       if self.angle == f["zilch"]: self.angle = f["aA"]
@@ -427,18 +457,77 @@ class Character:
 p = Character(733,833, "player","ak47")
 e =[]
 for i in range(2):
-  temp = Character(800+i*100, 1000,"enemy",None)
+  temp = Character(800+i*100, 1000,"enemy1",None)
+  temp2 = Character(1100+i*100, 1300,"enemy2",None)
+  e.append(temp2)
   e.append(temp)
 camera = Camera(0,0)
 t = []
 b = []
-for i in range(10):
-  temp = Tile(500+ (i+1)*tile_size, 500)
-  temp1 = Tile(500, 500 + (i+1)*tile_size)
-  t.append(temp1)
-  t.append(temp)
+for i in range(80):
+  
+  # for j in range(80):
+  #   if (i<=6): top = Tile(j*tile_size,i*tile_size)
+  #   t.append(top)
+  #   if (i>=74): bottom = Tile(j*tile_size,i*tile_size)
+  #   if (i>=74): t.append(bottom)
+  #   if (i<=8): left = Tile(i*tile_size,j*tile_size)
+  #   t.append(left)
+  #   if (i>=72): right = Tile(i*tile_size,j*tile_size)
+  #   if (i>=72): t.append(right)
+    
+  if (i!=15 and i!=16 and i!=25 and i!=24 and i!=35 and i!=36 and i!=46 and i!=47 and i!=57 and i!=58):
+    wall_ver1 = Tile( (i+1)*tile_size, 300)
+    wall_ver2 = Tile( (i+1)*tile_size, 1000)
+    wall_ver3 = Tile( (i+1)*tile_size, 2000)
+    wall_ver4 = Tile( (i+1)*tile_size, 2800)
+    wall_ver5 = Tile( (i+1)*tile_size, 3700)
+    t.append(wall_ver1)
+    t.append(wall_ver2)
+    t.append(wall_ver3)
+    t.append(wall_ver4)
+    t.append(wall_ver5)
+  
+  if (i!=15 and i!=16 and i!=23 and i!=24 and i!=35 and i!=36 and i!=46 and i!=47 and i!=57 and i!=58):
+    wall_hor1 = Tile(400,  (i+1)*tile_size)
+    wall_hor2 = Tile(1200,  (i+1)*tile_size)
+    wall_hor3 = Tile(2000,  (i+1)*tile_size)
+    wall_hor4 = Tile(2800,  (i+1)*tile_size)
+    wall_hor5 = Tile(3600,  (i+1)*tile_size)
+    t.append(wall_hor1)
+    t.append(wall_hor2)
+    t.append(wall_hor3)
+    t.append(wall_hor4)
+    t.append(wall_hor5)
+    
+    
+  # room 1:
+  if (i>=10 and i<=12):
+    wall1= Tile(750,i*tile_size)
+    t.append(wall1)
+    wall1= Tile(850,i*tile_size)
+    t.append(wall1)
+  
+wall1= Tile(800,500)
+t.append(wall1)
+wall1= Tile(800,600)
+t.append(wall1)
+box1=Tile(800,550,'crate')
+t.append(box1)
+wall1= Tile(750,800)
+t.append(box1)
+wall1= Tile(750,850)
+t.append(box1)
+wall1= Tile(750,900)
+t.append(box1)
+  
+    
 temp1 = Tile(1000, 1000,'crate')
 t.append(temp1)
+
+
+
+
 def cameraMove():
   nx = p.x - 400
   ny = p.y - 300
@@ -456,6 +545,7 @@ cameraMove()
 
 
 while(running):
+  clock.tick(60)
   if p.hitpoint <= 0: break
   pos = pygame.mouse.get_pos()
   # check tile
@@ -499,13 +589,14 @@ while(running):
 
   for i in b:
     i.draw(camera)
+
     if i.vD == 999: 
       b.remove(i)
       del i
   # renderitem
 
   pygame.display.flip()
-  clock.tick(60)
+  
   for i in pygame.event.get():
     if i.type == pygame.MOUSEBUTTONDOWN:
       p.shooting = True
