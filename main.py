@@ -4,6 +4,7 @@ import random
 import os
 import math
 
+pygame.init()
 print(os.path.abspath(os.getcwd()))
 path = os.path.abspath(os.getcwd())
 
@@ -36,6 +37,7 @@ screen = pygame.display.set_mode((X,Y))
 pygame.display.set_caption('Game')
 wall = pygame.image.load('./wallpaper.png')
 menu = pygame.image.load('./menu.png')
+menubutton = pygame.image.load('./menubutton.png')
 player = pygame.image.load('./ball.png')
 player = pygame.transform.scale(player,(player_width,player_height))
 tile = pygame.image.load('./tile.png')
@@ -86,7 +88,6 @@ class Camera:
     if dx > 1000 or dy > 800: return False
     return True
 
-
 class Tile:
   def __init__(self, x, y, type ="tile") -> None:
     self.x = x
@@ -126,10 +127,7 @@ class Tile:
       screen.blit(tile, (dx-tile_size/2,dy-tile_size/2))
     else:
       screen.blit(crate, (dx-tile_size/2,dy-tile_size/2))
-      
-
-  
-
+    
 class Ballistic:
   def __init__(self,x , y, v, vD, o,bullet, grenade = False, dmg = 30) -> None:
     self.x = x
@@ -206,7 +204,6 @@ class Ballistic:
     return False
 
   def checkHit(self, a,t):
-    
     if self.hidden == True: self.vD =999
     if self.exploded: return
     if type(a) == list and len(a)!=0:
@@ -265,9 +262,6 @@ class Item:
       if self.name=="star": o.dmg=o.dmg+50
       elif self.name=="gold": o.gold= o.gold+1
       else: o.hitpoint=o.hitpoint+50
-
-    
-
 
 class Character:
   def __init__(self, x, y, t, w,hitpoint = 100) -> None:
@@ -478,7 +472,7 @@ class Character:
       if self.angle == f["aSA"]: self.angle = f["aA"]
     self.vD = self.angle
     self.v = player_vmax
-p = Character(733,833, "player","ak47")
+p = Character(450,550, "player","ak47")
 
 def cameraMove():
   nx = p.x - 400
@@ -500,9 +494,7 @@ def initGame(e,t,b,item):
     e.append(temp2)
     e.append(temp)
 
-
-  for i in range(80):
-    
+  for i in range(80): 
       
     if (i!=15 and i!=16 and i!=25 and i!=24 and i!=35 and i!=36 and i!=46 and i!=47 and i!=57 and i!=58):
       wall_ver1 = Tile( (i+1)*tile_size, 300)
@@ -527,8 +519,6 @@ def initGame(e,t,b,item):
       t.append(wall_hor3)
       t.append(wall_hor4)
       t.append(wall_hor5)
-      
-      
     # room 1:
     if (i>=10 and i<=12):
       wall1= Tile(750,i*tile_size)
@@ -549,7 +539,6 @@ def initGame(e,t,b,item):
   wall1= Tile(750,900)
   t.append(box1)
     
-      
   temp1 = Tile(1000, 1000,'crate')
   t.append(temp1)
 
@@ -561,94 +550,113 @@ def initGame(e,t,b,item):
   item.append(temp1)
   item.append(temp2)
   
+  p.x=500
+  p.y=450
+  
 def resetGame(e,t,b,item):
   e = []
   t = []
   b = []
   item = []
-initGame(e,t,b,item)
-
-def Run():
-  clock = pygame.time.Clock()
-  running = True
+  # initGame(e,t,b,item)
   
-  pygame.init()
-  while(running):
-    clock.tick(60)
-    pygame.display.flip() 
-    if (False):
-      screen.blit(menu,(0,0),(camera.x,camera.y,800,600))
-      timeEnd=time.time()
-      if (timeEnd-time.time()>4): running=False
-    else:
-      # clock.tick(60)
-      if p.hitpoint <= 0: break
-      pos = pygame.mouse.get_pos()
-      # check tile
-      for i in t:
-        i.playerCollide(p,player_height)
-        for j in e:
-          i.playerCollide(j,player_height)
-      p.playerCollide(e)
-      p.update()
-      p.shoot(pos,b)
-      for i in e:
-        if i.hitpoint <=0:
-          e.remove(i)
-          del i
-          continue
-        i.attack(p)
-        i.update()
-      # check bullet
-      for i in b:
-        timex = time.time()
-        i.checkHit(t,timex)
-        i.checkHit(p,timex)
-        i.checkHit(e,timex)
-        i.move()
+
+clock = pygame.time.Clock()
+running = True
+menubar = True
+
+
+while(running):
+  clock.tick(60)
+  pygame.display.flip() 
+  if (menubar):
+    screen.blit(menu,(0,0),(camera.x,camera.y,800,600))
+    for i in pygame.event.get():
+      # if i.type == pygame.MOUSEBUTTONDOWN:
+      #   menubar=True
+      if i.type == pygame.MOUSEBUTTONUP:
         
-      cameraMove()
+        pos = pygame.mouse.get_pos()
+        if (pos[0]>=340 and pos[0]<=550 and pos[1]>=240 and pos[1]<=310): 
+          # resetGame(e,t,b,item)
+          initGame(e,t,b,item)
+          menubar = False
+  else: 
+    clock.tick(60)
+    
+    if p.hitpoint <= 0: break
+    pos = pygame.mouse.get_pos()
+    # if (pos[0]<100 and pos[1]<50): 
+    #   menubar=True
+    #   pass
+    # check tile
+    for i in t:
+      i.playerCollide(p,player_height)
+      for j in e:
+        i.playerCollide(j,player_height)
+    p.playerCollide(e)
+    p.update()
+    p.shoot(pos,b)
+    for i in e:
+      if i.hitpoint <=0:
+        e.remove(i)
+        del i
+        continue
+      i.attack(p)
+      i.update()
+    # check bullet
+    for i in b:
+      timex = time.time()
+      i.checkHit(t,timex)
+      i.checkHit(p,timex)
+      i.checkHit(e,timex)
+      i.move()
       
-      screen.blit(wall,(0,0),(camera.x,camera.y,800,600))
-      for i in e:
+    cameraMove()
+    
+    screen.blit(wall,(0,0),(camera.x,camera.y,800,600))
+    for i in e:
+      i.draw(camera)
+    p.draw(pos)
+    # draw tile/bullet
+    for i in t:
+      if i.hidden:
+        t.remove(i)
+        del i
+        continue
+      i.draw(camera)
+
+    for i in item:
+      i.checkCollide(p)
+      if i.state==False: del i
+      else: 
         i.draw(camera)
-      p.draw(pos)
-      # draw tile/bullet
-      for i in t:
-        if i.hidden:
-          t.remove(i)
-          del i
-          continue
-        i.draw(camera)
+    for i in b:
+      i.draw(camera)
 
-      for i in item:
-        i.checkCollide(p)
-        if i.state==False: del i
-        else: 
-          i.draw(camera)
-      for i in b:
-        i.draw(camera)
+      if i.vD == 999: 
+        b.remove(i)
+        del i
+    # renderitem
 
-        if i.vD == 999: 
-          b.remove(i)
-          del i
-      # renderitem
+    # pygame.display.flip()
+    
+    for i in pygame.event.get():
+      if i.type == pygame.MOUSEBUTTONDOWN:
+        p.shooting = True
+      if i.type == pygame.MOUSEBUTTONUP:
+        click=pygame.mouse.get_pos()
+        if (click[0]<100 and click[1]<50): 
+          menubar=True
+          pass
+        p.shooting = False
+        
+      key = pygame.key.get_pressed()
+      p.keyDown(key)
 
-      # pygame.display.flip()
-      
-      for i in pygame.event.get():
-        if i.type == pygame.MOUSEBUTTONDOWN:
-          p.shooting = True
-        if i.type == pygame.MOUSEBUTTONUP:
-          p.shooting = False
-        key = pygame.key.get_pressed()
-        p.keyDown(key)
-
-        if i.type == pygame.KEYUP:
-          p.keyUp(i.key)
-        if i.type == pygame.QUIT:
-          running = False
-     
-  pygame.quit()
-  
-Run()
+      if i.type == pygame.KEYUP:
+        p.keyUp(i.key)
+      if i.type == pygame.QUIT:
+        running = False
+    screen.blit(menubutton,(0,0))
+pygame.quit()
