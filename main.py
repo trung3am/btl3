@@ -4,6 +4,8 @@ import random
 import os
 import math
 
+
+
 pygame.init()
 print(os.path.abspath(os.getcwd()))
 path = os.path.abspath(os.getcwd())
@@ -60,7 +62,9 @@ grenade = pygame.transform.scale(grenade,(30,30))
 ak47 = pygame.image.load('./ak47.png')
 ak47 = pygame.transform.scale(ak47,(60,60))
 
+font = pygame.font.Font('freesansbold.ttf', 32)
 
+pygame.Surface.set_colorkey(menubutton,[255,255,255])
 pygame.Surface.set_colorkey(bullet,[255,255,255])
 pygame.Surface.set_colorkey(player,[255,255,255])
 pygame.Surface.set_colorkey(ak47,[255,255,255])
@@ -76,6 +80,20 @@ def rot_center(image, angle):
     rot_rect.center = rot_image.get_rect().center
     rot_image = rot_image.subsurface(rot_rect).copy()
     return rot_image
+
+# sound
+pygame.mixer.music.load(path + "\\bg.mp3")
+pygame.mixer.music.set_volume(.3)
+pygame.mixer.music.play(-1)
+
+shootsound=pygame.mixer.Sound(path+"\\ak47.mp3")
+shootsound.set_volume(.15)
+
+grenadesound=pygame.mixer.Sound(path+"\\grenade.mp3")
+grenadesound.set_volume(.035)
+
+collectsound=pygame.mixer.Sound(path+"\\collect.mp3")
+collectsound.set_volume(.035)
 
 class Camera:
   def __init__(self, x, y) -> None:
@@ -145,7 +163,6 @@ class Ballistic:
   def bounce(self,o):
     pass
 
-
   def move(self):
     if self.explosionChecked: self.exploded = True
     if self.vD == 999: return
@@ -184,6 +201,7 @@ class Ballistic:
   def checkExplode(self, o,t):
     
     if t - self.timer < 3: return
+    grenadesound.play()
     if type(o) != Character and type(o) != Tile: return
     self.explosionChecked = True
     dx = abs(self.x - o.x)
@@ -398,18 +416,18 @@ class Character:
     if not self.shooting: return
     # grenade
     if self.grenade:
-            
       if time.time() - self.lastshot  > 2:
         self.lastshot = time.time()
+        # grenadesound.play()
         p = self.getDirectionMouse(pos) 
         temp = Ballistic(self.x,self.y,900, p, "player",grenade, True )
         b.append(temp)
     else:
-      
+      shootsound.play()
       if time.time() - self.lastshot  > .15:
         self.lastshot = time.time()
         p = self.getDirectionMouse(pos) + random.randint(-self.recoil,self.recoil)
-
+        
         temp = Ballistic(self.x,self.y,2000, p, "player",bullet,False, self.dmg )
         b.append(temp)
 
@@ -494,43 +512,47 @@ def initGame(e,t,b,item):
     e.append(temp2)
     e.append(temp)
 
+  #build wall
   for i in range(80): 
       
-    if (i!=15 and i!=16 and i!=25 and i!=24 and i!=35 and i!=36 and i!=46 and i!=47 and i!=57 and i!=58):
-      wall_ver1 = Tile( (i+1)*tile_size, 300)
-      wall_ver2 = Tile( (i+1)*tile_size, 1000)
-      wall_ver3 = Tile( (i+1)*tile_size, 2000)
-      wall_ver4 = Tile( (i+1)*tile_size, 2800)
+    if (i>6 and i<74):
+      wall_ver1 = Tile( (i+1)*tile_size, 250)
       wall_ver5 = Tile( (i+1)*tile_size, 3700)
       t.append(wall_ver1)
-      t.append(wall_ver2)
-      t.append(wall_ver3)
-      t.append(wall_ver4)
       t.append(wall_ver5)
+      if (i!=15 and i!=16 and i!=25 and i!=24 and i!=35 and i!=36 and i!=46 and i!=47 and i!=57 and i!=58):
+        wall_ver2 = Tile( (i+1)*tile_size, 1000)
+        wall_ver3 = Tile( (i+1)*tile_size, 2000)
+        wall_ver4 = Tile( (i+1)*tile_size, 2800)
+        t.append(wall_ver2)
+        t.append(wall_ver3)
+        t.append(wall_ver4)
     
-    if (i!=15 and i!=16 and i!=23 and i!=24 and i!=35 and i!=36 and i!=46 and i!=47 and i!=57 and i!=58):
-      wall_hor1 = Tile(400,  (i+1)*tile_size)
-      wall_hor2 = Tile(1200,  (i+1)*tile_size)
-      wall_hor3 = Tile(2000,  (i+1)*tile_size)
-      wall_hor4 = Tile(2800,  (i+1)*tile_size)
-      wall_hor5 = Tile(3600,  (i+1)*tile_size)
+    if (i>3 and i<77):
+      wall_hor1 = Tile(350,  (i)*tile_size)
+      wall_hor5 = Tile(3600,  (i)*tile_size)
       t.append(wall_hor1)
-      t.append(wall_hor2)
-      t.append(wall_hor3)
-      t.append(wall_hor4)
       t.append(wall_hor5)
+      if (i!=15 and i!=16 and i!=23 and i!=24 and i!=35 and i!=36 and i!=46 and i!=47 and i!=57 and i!=58):
+        wall_hor2 = Tile(1200,  (i)*tile_size)
+        wall_hor3 = Tile(2000,  (i)*tile_size)
+        wall_hor4 = Tile(2800,  (i)*tile_size)
+        t.append(wall_hor2)
+        t.append(wall_hor3)
+        t.append(wall_hor4)
     # room 1:
     if (i>=10 and i<=12):
       wall1= Tile(750,i*tile_size)
       t.append(wall1)
       wall1= Tile(850,i*tile_size)
       t.append(wall1)
-    
   wall1= Tile(800,500)
   t.append(wall1)
   wall1= Tile(800,600)
   t.append(wall1)
   box1=Tile(800,550,'crate')
+  # temp2= Item(900,950,"gold",True)
+  # item.append(temp2)
   t.append(box1)
   wall1= Tile(750,800)
   t.append(box1)
@@ -542,7 +564,7 @@ def initGame(e,t,b,item):
   temp1 = Tile(1000, 1000,'crate')
   t.append(temp1)
 
-  item =[]
+  # item =[]
   temp= Item(900,900,"hp",True)
   temp1= Item(950,900,"star",True)
   temp2= Item(900,950,"gold",True)
@@ -553,6 +575,7 @@ def initGame(e,t,b,item):
   p.x=500
   p.y=450
   
+    
 def resetGame(e,t,b,item):
   e = []
   t = []
@@ -564,27 +587,43 @@ def resetGame(e,t,b,item):
 clock = pygame.time.Clock()
 running = True
 menubar = True
-
+gameOver=False
 
 while(running):
   clock.tick(60)
   pygame.display.flip() 
   if (menubar):
-    screen.blit(menu,(0,0),(camera.x,camera.y,800,600))
+    screen.blit(menu,(0,0))
     for i in pygame.event.get():
       # if i.type == pygame.MOUSEBUTTONDOWN:
       #   menubar=True
       if i.type == pygame.MOUSEBUTTONUP:
-        
         pos = pygame.mouse.get_pos()
+        #newgame
         if (pos[0]>=340 and pos[0]<=550 and pos[1]>=240 and pos[1]<=310): 
-          # resetGame(e,t,b,item)
           initGame(e,t,b,item)
+          for i in e:
+            print(i.type)
           menubar = False
+        #cont
+        if (pos[0]>=340 and pos[0]<=550 and pos[1]>=350 and pos[1]<=420): 
+          if (e!=[]): 
+            menubar = False
+            # print(menubar)
+          # else: 
+        #exit
+        if (pos[0]>=520 and pos[0]<=720 and pos[1]>=470 and pos[1]<=550): 
+          running = False
+        # about
+        if (pos[0]>=520 and pos[0]<=720 and pos[1]>=470 and pos[1]<=550): 
+          about=True
+      if i.type == pygame.QUIT:
+        running = False
   else: 
     clock.tick(60)
     
-    if p.hitpoint <= 0: break
+    if p.hitpoint <= 0:
+      gameOver=True
     pos = pygame.mouse.get_pos()
     # if (pos[0]<100 and pos[1]<50): 
     #   menubar=True
@@ -614,7 +653,12 @@ while(running):
       
     cameraMove()
     
+    # text = font.render("Gold: ", True, green, blue)
+    # screen.blit(text,(10,10))
+    
     screen.blit(wall,(0,0),(camera.x,camera.y,800,600))
+    
+    
     for i in e:
       i.draw(camera)
     p.draw(pos)
@@ -626,9 +670,12 @@ while(running):
         continue
       i.draw(camera)
 
+    
     for i in item:
       i.checkCollide(p)
-      if i.state==False: del i
+      
+      if i.state==False: 
+        item.remove(i)
       else: 
         i.draw(camera)
     for i in b:
