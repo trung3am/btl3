@@ -7,7 +7,7 @@ import math
 
 
 pygame.init()
-pygame.display.set_caption('THShoot v1.0')
+
 print(os.path.abspath(os.getcwd()))
 path = os.path.abspath(os.getcwd())
 
@@ -15,16 +15,23 @@ MAXX = 4000
 MAXY = 4000
 X= 800
 Y= 600
-player_width = 50
-player_height = 50
+player_width = 45
+player_height = 45
 tile_size = 50
 friction = 10
 player_vmax = 500
+wall_arr=[7,24,40,56,74]
+GOLD=0
+HITPOINT=250
+DMG=50
+
 tick = 64
 bullet_size = {
   "pistol": (20,20)
 }
-
+white = (255, 255, 255)
+green = (0, 255, 0)
+blue = (0, 0, 128)
 f = {
 	"aW" : 0,
 	"aWD" : 45,
@@ -39,14 +46,19 @@ f = {
 
 
 screen = pygame.display.set_mode((X,Y))
+pygame.display.set_caption('THShoot v1.0')
 pygame.display.set_caption('Game')
 wall = pygame.image.load('./wallpaper.png')
 menu = pygame.image.load('./menu.png')
 about = pygame.image.load('./about.png')
 gameover = pygame.image.load('./gameover.png')
 menubutton = pygame.image.load('./menubutton.png')
-player = pygame.image.load('./ball.png')
+player = pygame.image.load('./player.png')
 player = pygame.transform.scale(player,(player_width,player_height))
+enemy = pygame.image.load('./enemy.png')
+enemy = pygame.transform.scale(enemy,(player_width,player_height))
+boss = pygame.image.load('./boss.png')
+boss = pygame.transform.scale(boss,(player_width*1.5,player_height*1.5))
 tile = pygame.image.load('./tile.png')
 tile = pygame.transform.scale(tile,(tile_size,tile_size))
 star = pygame.image.load('./star.png')
@@ -69,9 +81,13 @@ ak47 = pygame.transform.scale(ak47,(50,50))
 
 font = pygame.font.Font('freesansbold.ttf', 32)
 
+
+
 pygame.Surface.set_colorkey(menubutton,[255,255,255])
 pygame.Surface.set_colorkey(bullet,[255,255,255])
 pygame.Surface.set_colorkey(player,[255,255,255])
+pygame.Surface.set_colorkey(enemy,[255,255,255])
+pygame.Surface.set_colorkey(boss,[255,255,255])
 pygame.Surface.set_colorkey(ak47,[255,255,255])
 pygame.Surface.set_colorkey(grenade,[255,255,255])
 pygame.Surface.set_colorkey(star,[255,255,255])
@@ -102,7 +118,7 @@ def rot_center(image, angle):
 
 # sound
 pygame.mixer.music.load(path + "\\bg.mp3")
-pygame.mixer.music.set_volume(.3)
+pygame.mixer.music.set_volume(.15)
 pygame.mixer.music.play(-1)
 
 shootsound=pygame.mixer.Sound(path+"\\ak47.mp3")
@@ -112,7 +128,10 @@ grenadesound=pygame.mixer.Sound(path+"\\grenade.mp3")
 grenadesound.set_volume(.035)
 
 collectsound=pygame.mixer.Sound(path+"\\collect.mp3")
-collectsound.set_volume(.035)
+collectsound.set_volume(.6)
+
+brokensound=pygame.mixer.Sound(path+"\\broken.mp3")
+brokensound.set_volume(.6)
 
 class Camera:
   def __init__(self, x, y) -> None:
@@ -228,14 +247,14 @@ class Ballistic:
     d = math.sqrt(dx*dx+dy*dy)
 
     if d <  100 :
-      if type(o) == Character: o.hitpoint = o.hitpoint - 30
+      if type(o) == Character: o.hitpoint = o.hitpoint - 75
       if type(o) == Tile and o.type == 'crate':
         o.hidden = True
     if d <  70 :
-      if type(o) == Character: o.hitpoint = o.hitpoint - 40
+      if type(o) == Character: o.hitpoint = o.hitpoint - 100
 
     if d <  40 :
-      if type(o) == Character: o.hitpoint = o.hitpoint - 50
+      if type(o) == Character: o.hitpoint = o.hitpoint - 150
 
       return True
     return False
@@ -297,11 +316,13 @@ class Item:
     if dx < tile_size/2 and dy < tile_size/2:
       self.state=False
       if self.name=="star": o.dmg=o.dmg+50
-      elif self.name=="gold": o.gold= o.gold+1
+      elif self.name=="gold": o.gold= o.gold+10
       else: o.hitpoint=o.hitpoint+50
 
+
+
 class Character:
-  def __init__(self, x, y, t, w,hitpoint = 100) -> None:
+  def __init__(self, x, y, t, w,hitpoint = HITPOINT,dmg=DMG) -> None:
     self.x = x
     self.y = y
     self.m = False
@@ -309,7 +330,7 @@ class Character:
     self.vD = 999
     self.d = 0
     self.f = False
-    self.v = 100
+    self.v = 250
     self.weapon = w
     self.face = 0
     self.hitpoint = hitpoint
@@ -320,8 +341,8 @@ class Character:
     self.ammo = [0,0,0]
     self.loadedAmmo = [0,0,0]
     self.grenade = False
-    self.gold=0
-    self.dmg=50
+    self.gold=GOLD
+    self.dmg=dmg
     
 
   def attack(self,o):
@@ -329,7 +350,7 @@ class Character:
     if self.type == "enemy1":
       dx = self.x - o.x
       dy = self.y - o.y
-      if math.sqrt(dx*dx + dy*dy) < 250:
+      if math.sqrt(dx*dx + dy*dy) < 350:
         self.vD = self.getDirection((o.x,o.y))
       else:
         self.vD = 999
@@ -337,7 +358,7 @@ class Character:
       dx = self.x - o.x
       dy = self.y - o.y
 
-      if math.sqrt(dx*dx + dy*dy) < 350 and  time.time() - self.lastshot > 2:
+      if math.sqrt(dx*dx + dy*dy) < 400 and  time.time() - self.lastshot > 2:
         self.lastshot =  time.time()
         p = self.getDirection((o.x,o.y))
         temp = Ballistic(self.x,self.y,500, p+1, "enemy2",bullet, False, 15 )
@@ -401,11 +422,16 @@ class Character:
     dy =  300 - pos[1]
     d = abs(dx) + abs(dy)
     dir = self.getDirectionMouse(pos)
+    flipFlag=False
+    if dir>180: 
+      dir=360-dir
+      flipFlag=True
     gun = rot_center(g,-dir)
     if g==grenade:
       tempgrenade=pygame.transform.rotate(grenade,dir)
       screen.blit(tempgrenade,(400 -player_height/2+5,300+15-player_height/2))
     else:
+      if flipFlag: gun=pygame.transform.flip(gun,True,False)
       screen.blit(gun,(400-dx/d*25 -player_height/2,300-dy/d*25-player_height/2))
   def draw(self, pos):
     if self.type == "player": 
@@ -419,14 +445,29 @@ class Character:
         self.drawGun(pos, ak47)
     else:
       self.drawEnemy(pos)
+
     
   def drawEnemy(self, cam):
     dx = self.x - cam.x
     dy = self.y - cam.y
     if dx < -50 or dy < -50: return False
     if dx > 850 or dy > 650: return False
-    screen.blit(player, (dx-player_height/2,dy-player_height/2))
-
+    temp1=dx-player_height/2
+    temp2=dy-player_height/2
+    if (self.dmg>99):
+      screen.blit(boss, (temp1,temp2))
+    else: screen.blit(enemy, (temp1,temp2))
+    if self.type=="enemy2":
+      
+      # gun=rot_center(ak47,-dir)
+      
+      # screen.blit(ak47, (temp1,temp2))
+      # gun=pygame.transform.rotate(ak47,dir)
+      # if flipFlag: gun=pygame.transform.flip(ak47,True,False)
+      gun=pygame.transform.rotate(ak47,270)
+      if self.dmg<99:screen.blit(gun,(temp1+2,temp2+8))
+      else: screen.blit(gun,(temp1+14,temp2+32))
+ 
   def playerCollide(self, e):
     for i in e:
       d = math.sqrt((self.x - i.x)*(self.x - i.x) + (self.y - i.y)*(self.y - i.y))
@@ -463,7 +504,7 @@ class Character:
     if key[pygame.K_1] :
       self.grenade = False
       # self.lastshot = 2
-      print(self.grenade)
+      # print(self.grenade)
     if key[pygame.K_a] :
       if self.angle == f["zilch"]: self.angle = f["aA"]
       if self.angle == f["aD"]: self.angle = f["aA"]
@@ -528,32 +569,43 @@ e =[]
 t = []
 b = []
 item =[]
+def resetGame(e,t,b,item):
+  e = []
+  t = []
+  b = []
+  item = []
+  
 def initGame(e,t,b,item):
-  for i in range(2):
-    temp = Character(800+i*100, 1000,"enemy1",None)
-    temp2 = Character(1100+i*100, 1300,"enemy2",None)
-    e.append(temp2)
-    e.append(temp)
+  resetGame(e,t,b,item)
+  p.hitpoint=HITPOINT
+  p.dmg=DMG
+  p.gold=GOLD
+  # if e!=[]: e=[]
+  # for i in range(2):
+  #   temp = Character(800+i*100, 1000,"enemy1",None)
+  #   temp2 = Character(1100+i*100, 1300,"enemy2",None)
+  #   e.append(temp2)
+  #   e.append(temp)
 
   #build wall
   for i in range(80): 
       
-    if (i>6 and i<74):
-      wall_ver1 = Tile( (i+1)*tile_size, 250)
-      wall_ver5 = Tile( (i+1)*tile_size, 3700)
+    if (i>4 and i<75):
+      wall_ver1 = Tile( i*tile_size, 250)
+      wall_ver5 = Tile( i*tile_size, 3700)
       t.append(wall_ver1)
       t.append(wall_ver5)
       if (i!=15 and i!=16 and i!=25 and i!=24 and i!=35 and i!=36 and i!=46 and i!=47 and i!=57 and i!=58):
-        wall_ver2 = Tile( (i+1)*tile_size, 1000)
-        wall_ver3 = Tile( (i+1)*tile_size, 2000)
-        wall_ver4 = Tile( (i+1)*tile_size, 2800)
+        wall_ver2 = Tile( i*tile_size, 1200)
+        wall_ver3 = Tile( i*tile_size, 2000)
+        wall_ver4 = Tile( i*tile_size, 2800)
         t.append(wall_ver2)
         t.append(wall_ver3)
         t.append(wall_ver4)
     
     if (i>3 and i<77):
       wall_hor1 = Tile(350,  (i)*tile_size)
-      wall_hor5 = Tile(3600,  (i)*tile_size)
+      wall_hor5 = Tile(3700,  (i)*tile_size)
       t.append(wall_hor1)
       t.append(wall_hor5)
       if (i!=15 and i!=16 and i!=23 and i!=24 and i!=35 and i!=36 and i!=46 and i!=47 and i!=57 and i!=58):
@@ -563,47 +615,72 @@ def initGame(e,t,b,item):
         t.append(wall_hor2)
         t.append(wall_hor3)
         t.append(wall_hor4)
-    # room 1:
-    if (i>=10 and i<=12):
-      wall1= Tile(750,i*tile_size)
-      t.append(wall1)
-      wall1= Tile(850,i*tile_size)
-      t.append(wall1)
-  wall1= Tile(800,500)
-  t.append(wall1)
-  wall1= Tile(800,600)
-  t.append(wall1)
-  box1=Tile(800,550,'crate')
-  # temp2= Item(900,950,"gold",True)
-  # item.append(temp2)
-  t.append(box1)
-  wall1= Tile(750,800)
-  t.append(box1)
-  wall1= Tile(750,850)
-  t.append(box1)
-  wall1= Tile(750,900)
-  t.append(box1)
-    
-  temp1 = Tile(1000, 1000,'crate')
-  t.append(temp1)
-
-  # item =[]
-  temp= Item(900,900,"hp",True)
-  temp1= Item(950,900,"star",True)
-  temp2= Item(900,950,"gold",True)
-  item.append(temp)
-  item.append(temp1)
-  item.append(temp2)
+  # numitem=random.randint(400,500)
+  # room1
+  # for i in range(8):
+  #   random.randint()
   
+  arrX=[]
+  arrY=[]
+  arrT=[]
+  for i in range(4):
+    for j in range(4):
+      for numitem in range(random.randint(2,5)):
+        arrX.append(random.randint(wall_arr[i]+1,wall_arr[i+1]-1))
+        arrY.append(random.randint(wall_arr[j]+1,wall_arr[j+1]-1))
+        temp=random.randint(0,5);
+        if (temp>3): arrT.append("enemy1")
+        else: arrT.append("enemy2")
+  for i in range(len(arrX)):
+    if ((arrX[i]*tile_size>3400<3600 and arrY[i]*tile_size>3400<3600) or (arrX[i]*tile_size>400<600 and arrY[i]*tile_size>3400<3600) or (arrX[i]*tile_size>3400<3600 and arrY[i]*tile_size>400<600)): pass
+    temp = Character(arrX[i]*tile_size, arrY[i]*tile_size,arrT[i],None)
+    e.append(temp)
+  
+  arrX=[]
+  arrY=[]
+  arrT=[]
+  for i in range(4):
+    for j in range(4):
+      for numitem in range(5):
+        arrX.append(random.randint(wall_arr[i]+1,wall_arr[i+1]-1))
+        arrY.append(random.randint(wall_arr[j]+1,wall_arr[j+1]-1))
+        temp=random.randint(1,10);
+        if (temp>5): arrT.append("gold")
+        elif (temp>2): arrT.append("hp")
+        else: arrT.append("star")
+  for i in range(len(arrX)):
+    temp=Tile(arrX[i]*tile_size,arrY[i]*tile_size,"crate")
+    temp1=Item(arrX[i]*tile_size,arrY[i]*tile_size,arrT[i],True)
+    t.append(temp)
+    item.append(temp1)
+    
+  arrX=[]
+  arrY=[]
+  arrT=[]
+  for i in range(4):
+    for j in range(4):
+      for numitem in range(5):
+        arrX.append(random.randint(wall_arr[i]+1,wall_arr[i+1]-1))
+        arrY.append(random.randint(wall_arr[j]+1,wall_arr[j+1]-1))
+        temp=random.randint(1,10);
+  for i in range(len(arrX)):
+    temp=Tile(arrX[i]*tile_size,arrY[i]*tile_size)
+    t.append(temp)
+  
+  
+  boss1=Character(3500,3500,"enemy2",None,1500,100)
+  boss2=Character(3500,500,"enemy1",None,2000,100)
+  boss3=Character(500,3500,"enemy1",None,2000,100)
+  boss2.v=350
+  boss3.v=350
+  e.append(boss1)
+  e.append(boss3)
+  e.append(boss2)
   p.x=500
   p.y=450
   
     
-def resetGame(e,t,b,item):
-  e = []
-  t = []
-  b = []
-  item = []
+
   # initGame(e,t,b,item)
   
 
@@ -611,6 +688,7 @@ clock = pygame.time.Clock()
 running = True
 menubar = True
 gameOver=False
+timeGO=0
 aboutbar = False
 
 
@@ -625,15 +703,19 @@ while(running):
       if i.type == pygame.MOUSEBUTTONUP:
         pos = pygame.mouse.get_pos()
         #newgame
-        if (pos[0]>=340 and pos[0]<=550 and pos[1]>=240 and pos[1]<=310): 
+        if (pos[0]>=340 and pos[0]<=550 and pos[1]>=140 and pos[1]<=220): 
+        # if (pos[0]>=340 and pos[0]<=550 and pos[1]>=240 and pos[1]<=310): 
           initGame(e,t,b,item)
-          for i in e:
-            print(i.type)
+          # for i in e:
+          #   print(i.type)
           menubar = False
         #cont
-        if (pos[0]>=340 and pos[0]<=550 and pos[1]>=350 and pos[1]<=420): 
+        if (pos[0]>=340 and pos[0]<=550 and pos[1]>=240 and pos[1]<=310): 
+        
+        # if (pos[0]>=340 and pos[0]<=550 and pos[1]>=350 and pos[1]<=420): 
           if (e!=[]): 
             menubar = False
+            if (p.hitpoint<=0): menubar=True
             # print(menubar)
           # else: 
         #exit
@@ -657,12 +739,29 @@ while(running):
       if i.type == pygame.QUIT:
         running = False
     screen.blit(menubutton,(0,0))
+  elif (gameOver):  
+    screen.blit(gameover,(0,0))
+    resetGame(e,t,b,item)
+    if time.time()-timeGO>=2:
+      
+      menubar=True
+      gameOver=False
     # pass
   else: 
     clock.tick(60)
     
     if p.hitpoint <= 0:
+      resetGame(e,t,b,item)
+      # chỗ này gọi reset rồi nhưng ko xóa :v
+      # reset tay
+      e=[]
+      t=[] 
+      b=[]
+      item=[]
+      # print(len(e))
       gameOver=True
+      
+      timeGO=time.time()
     pos = pygame.mouse.get_pos()
     # if (pos[0]<100 and pos[1]<50): 
     #   menubar=True
@@ -702,12 +801,7 @@ while(running):
       i.draw(camera)
     p.draw(pos)
     # draw tile/bullet
-    for i in t:
-      if i.hidden:
-        t.remove(i)
-        del i
-        continue
-      i.draw(camera)
+    
 
     
     for i in item:
@@ -715,8 +809,16 @@ while(running):
       
       if i.state==False: 
         item.remove(i)
+        collectsound.play()
       else: 
         i.draw(camera)
+    for i in t:
+      if i.hidden:
+        brokensound.play()
+        t.remove(i)
+        del i
+        continue
+      i.draw(camera)
     for i in b:
       i.draw(camera)
 
@@ -744,5 +846,8 @@ while(running):
         p.keyUp(i.key)
       if i.type == pygame.QUIT:
         running = False
+    text = font.render("Gold: "+str(p.gold)+"   HP: "+str(p.hitpoint)+"    DMG:  "+str(p.dmg), True,green, blue)
+    screen.blit(text, (300,10))
+    # screen.blit(text, (650,50))
     screen.blit(menubutton,(0,0))
 pygame.quit()
