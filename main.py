@@ -7,6 +7,7 @@ import math
 
 
 pygame.init()
+pygame.display.set_caption('THShoot v1.0')
 print(os.path.abspath(os.getcwd()))
 path = os.path.abspath(os.getcwd())
 
@@ -35,10 +36,14 @@ f = {
 	"aWA" : 315,
 	"zilch" : 999
 }
+
+
 screen = pygame.display.set_mode((X,Y))
 pygame.display.set_caption('Game')
 wall = pygame.image.load('./wallpaper.png')
 menu = pygame.image.load('./menu.png')
+about = pygame.image.load('./about.png')
+gameover = pygame.image.load('./gameover.png')
 menubutton = pygame.image.load('./menubutton.png')
 player = pygame.image.load('./ball.png')
 player = pygame.transform.scale(player,(player_width,player_height))
@@ -57,10 +62,10 @@ bullet = pygame.transform.scale(bullet,bullet_size["pistol"])
 crate = pygame.image.load('./crate.png')
 crate = pygame.transform.scale(crate,(tile_size,tile_size))
 grenade = pygame.image.load('./grenade.png')
-grenade = pygame.transform.scale(grenade,(30,30))
+grenade = pygame.transform.scale(grenade,(25,25))
 
 ak47 = pygame.image.load('./ak47.png')
-ak47 = pygame.transform.scale(ak47,(60,60))
+ak47 = pygame.transform.scale(ak47,(50,50))
 
 font = pygame.font.Font('freesansbold.ttf', 32)
 
@@ -72,6 +77,20 @@ pygame.Surface.set_colorkey(grenade,[255,255,255])
 pygame.Surface.set_colorkey(star,[255,255,255])
 pygame.Surface.set_colorkey(gold,[255,255,255])
 pygame.Surface.set_colorkey(hp,[255,255,255])
+
+def playerDraw(image,angle):
+  orig_rect = image.get_rect()
+  rot_image=image
+  if ((-angle)<180):
+    rot_image = image
+  else: 
+    rot_image = pygame.transform.flip(image, True,False)
+  # rot_image = pygame.transform.scale(rot_image,(50,60))
+  rot_rect = orig_rect.copy()
+  rot_rect.center = rot_image.get_rect().center
+  rot_image = rot_image.subsurface(rot_rect).copy()
+  return rot_image
+
 def rot_center(image, angle):
     """rotate an image while keeping its center and size"""
     orig_rect = image.get_rect()
@@ -383,13 +402,17 @@ class Character:
     d = abs(dx) + abs(dy)
     dir = self.getDirectionMouse(pos)
     gun = rot_center(g,-dir)
-    
-    screen.blit(gun,(400-dx/d*25 -player_height/2,300-dy/d*25-player_height/2))
-
+    if g==grenade:
+      tempgrenade=pygame.transform.rotate(grenade,dir)
+      screen.blit(tempgrenade,(400 -player_height/2+5,300+15-player_height/2))
+    else:
+      screen.blit(gun,(400-dx/d*25 -player_height/2,300-dy/d*25-player_height/2))
   def draw(self, pos):
     if self.type == "player": 
-      body = rot_center(player,-self.getDirectionMouse(pos))
-      screen.blit(body,(400-player_height/2,300-player_height/2))
+      
+      # body = rot_center(player,-self.getDirectionMouse(pos))
+      body=playerDraw(player,-self.getDirectionMouse(pos));
+      screen.blit(body,(400-player_height/2,300-player_height/2-15))
       if self.grenade:
         self.drawGun(pos, grenade)
       else:
@@ -588,6 +611,8 @@ clock = pygame.time.Clock()
 running = True
 menubar = True
 gameOver=False
+aboutbar = False
+
 
 while(running):
   clock.tick(60)
@@ -612,13 +637,27 @@ while(running):
             # print(menubar)
           # else: 
         #exit
-        if (pos[0]>=520 and pos[0]<=720 and pos[1]>=470 and pos[1]<=550): 
+        if (pos[0]>=520 and pos[0]<=720 and pos[1]>=470<=550): 
           running = False
         # about
-        if (pos[0]>=520 and pos[0]<=720 and pos[1]>=470 and pos[1]<=550): 
-          about=True
+        if (pos[0]>=110<=310 and pos[1]>=470<=550): 
+          menubar=False
+          aboutbar=True
       if i.type == pygame.QUIT:
         running = False
+  elif (aboutbar):
+    screen.blit(about,(0,0))
+    for i in pygame.event.get():
+      if i.type == pygame.MOUSEBUTTONUP:
+        click=pygame.mouse.get_pos()
+        if (click[0]<100 and click[1]<50): 
+          menubar=True
+          aboutbar=False
+          pass
+      if i.type == pygame.QUIT:
+        running = False
+    screen.blit(menubutton,(0,0))
+    # pass
   else: 
     clock.tick(60)
     
