@@ -46,8 +46,8 @@ f = {
 
 
 screen = pygame.display.set_mode((X,Y))
+# pygame.display.set_caption('THShoot v1.0')
 pygame.display.set_caption('THShoot v1.0')
-pygame.display.set_caption('Game')
 wall = pygame.image.load('./wallpaper.png')
 menu = pygame.image.load('./menu.png')
 about = pygame.image.load('./about.png')
@@ -625,11 +625,11 @@ def initGame(e,t,b,item):
   arrT=[]
   for i in range(4):
     for j in range(4):
-      for numitem in range(random.randint(2,5)):
+      for numitem in range(random.randint(2,3)):
         arrX.append(random.randint(wall_arr[i]+1,wall_arr[i+1]-1))
         arrY.append(random.randint(wall_arr[j]+1,wall_arr[j+1]-1))
         temp=random.randint(0,5);
-        if (temp>3): arrT.append("enemy1")
+        if (temp<4): arrT.append("enemy1")
         else: arrT.append("enemy2")
   for i in range(len(arrX)):
     if ((arrX[i]*tile_size>3400<3600 and arrY[i]*tile_size>3400<3600) or (arrX[i]*tile_size>400<600 and arrY[i]*tile_size>3400<3600) or (arrX[i]*tile_size>3400<3600 and arrY[i]*tile_size>400<600)): pass
@@ -850,4 +850,5 @@ while(running):
     screen.blit(text, (300,10))
     # screen.blit(text, (650,50))
     screen.blit(menubutton,(0,0))
+    # pygame.display.set_caption('THShoot v1.0')
 pygame.quit()
